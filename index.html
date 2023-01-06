@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>canvas - 裁剪</title>
+  <style>
+    /* 给画布增加一个阴影和圆角的样式 */
+    canvas {
+      box-shadow: 0px 0px 5px #ccc;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="canvas" width="500" height="500">
+    当前浏览器不支持canvas元素，请升级或更换浏览器！
+  </canvas>
+  <script>
+    let canvas = document.getElementById('canvas');
+    let canvasWidth = 500
+    let canvasHeight = 500
+    if (canvas.getContext) {
+      var ctx = canvas.getContext('2d');
+      const baseStar = {
+        x: canvasWidth / 2,
+        y: canvasHeight / 2,
+        r: 5,
+        color: '#fff',
+        speed: 1,
+        imgSrc: 'assets/image/cxkk.png',
+        width: 40,
+        height: 40
+      }
+      const stars = []
+      const bnts = []
+      const particles = []
+      function randomColor () {
+        const r = Math.floor(Math.random() * 256);
+        const g = Math.floor(Math.random() * 256);
+        const b = Math.floor(Math.random() * 256);
+        return `rgb(${r},${g},${b})`
+      }
+      function loadSource (type, src) {
+        let source
+        switch (type) {
+          case 'img':
+            source = new Image();
+            source.src = src;
+            break;
+          case 'audio':
+            let b = new Audio();
+            b.src = src;
+            b.play()
+            break;
+          default:
+            break;
+        }
+        return source
+      }
+      function showTail () {
+        ctx.beginPath()
+        ctx.fillStyle = 'rgba(0,0,0,.1)'
+        ctx.fillRect(0, 0, canvasWidth, canvasHeight)
+      }
+
+      function Star (x, y, r, speed, color, width, height, imgSrc) {
+        this.x = x || Math.random() * canvasWidth
+        this.y = y || Math.random() * canvasHeight
+        this.r = r || 5 + Math.random() * 10
+        this.speed = speed || 2
+        this.color = color || randomColor()
+        // 对于图片元素 所需要控制图片大小
+        this.width = width
+        this.height = height
+        this.imgSrc = imgSrc
+      }
+      function particle (x, y, r) {
+        this.x = x
+        this.y = y
+        this.r = 1
+        this.vx = (Math.random() * 1.5) * Math.pow(-1, Math.round(Math.random()))
+        this.vy = (Math.random() * 1.5) * Math.pow(-1, Math.round(Math.random()))
+        this.color = randomColor()
+      }
+      function createParticle (x, y) {
+        for (let i = 0; i < 10; i++) {
+          particles.push(new particle(x, y))
+        }
+      }
+
+      function insertIns (ins) {
+        ctx.beginPath()
+        if (ins.imgSrc) {
+          let fillImg = loadSource('img', ins.imgSrc)
+          fillImg.onload = function () {
+            ctx.drawImage(fillImg, ins.x - ins.width / 2, ins.y - ins.height / 2, ins.width, ins.height)
+          }
+        }
+        else {
+          ctx.arc(ins.x, ins.y, ins.r, 0, Math.PI * 2)
+          ctx.fillStyle = ins.color ? ins.color : '#fff'
+          ctx.fill()
+        }
+      }
+      function initIns () {
+        showTail()
+        insertIns(baseStar)
+      }
+
+      function starMove () {
+        initIns()
+        stars.map((star, index) => {
+          const angle = Math.atan2(baseStar.y - star.y, baseStar.x - star.x);
+          star.x += Math.cos(angle) * star.speed
+          star.y += Math.sin(angle) * star.speed
+          const z = Math.sqrt(Math.pow(star.x - baseStar.x, 2) + Math.pow(star.y - baseStar.y, 2))
+          if (z <= baseStar.r + star.r) {
+            stars.splice(index, 1)
+            loadSource('audio', 'assets/audio/do.mp3')
+            return
+          }
+          insertIns(star)
+        })
+        requestAnimationFrame(starMove)
+      }
+      function ShutMove () {
+        initIns()
+        bnts.map((bnt, bntIndex) => {
+          const angle = Math.atan2(baseStar.y - bnt.y, baseStar.x - bnt.x);
+          bnt.x += Math.cos(angle) * bnt.speed
+          bnt.y += Math.sin(angle) * bnt.speed
+          insertIns(bnt)
+          stars.map((star, starIndex) => {
+            const z = Math.sqrt(Math.pow(star.x - bnt.x, 2) + Math.pow(star.y - bnt.y, 2))
+            if (z <= bnt.r + star.r) {
+              stars.splice(starIndex, 1)
+              bnts.splice(bntIndex, 1)
+              loadSource('audio', 'assets/audio/6.mp3')
+              createParticle(star.x, star.y)
+            }
+          })
+        })
+        requestAnimationFrame(ShutMove)
+      }
+      function particleMove () {
+        particles.map(item => {
+          item.x += item.vx
+          item.y += item.vy
+          insertIns(item)
+        })
+        requestAnimationFrame(particleMove)
+      }
+
+      canvas.onclick = (e) => {
+        loadSource('audio', 'assets/audio/ji.mp3')
+        let angle = Math.atan2(e.clientY - canvas.height / 2, e.clientX - canvas.width / 2);
+        let x = baseStar.r * Math.cos(angle) + baseStar.x
+        let y = baseStar.r * Math.sin(angle) + baseStar.y
+        const star = new Star(x, y, 2, -2, '#fff', 25, 25, 'assets/image/bask.png')
+        bnts.push(star)
+      }
+      requestAnimationFrame(starMove)
+      requestAnimationFrame(ShutMove)
+      requestAnimationFrame(particleMove)
+      setInterval(() => {
+        stars.push(new Star())
+      }, 1500);
+
+    }
+  </script>
+</body>
+<style>
+  #canvas {
+    background-color: black;
+  }
+</style>
+
+</html>
